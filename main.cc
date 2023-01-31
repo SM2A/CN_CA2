@@ -41,6 +41,9 @@ NS_LOG_COMPONENT_DEFINE ("LoadBalancer");
 
 int main(int argc, char *argv[]) {
 
+    double bandWidth[3] = {1.0, 10.0, 100.0};
+    double error_rate[5] = {0.0, 0.000001, 0.00001, 0.0001, 0.001};
+
     uint32_t payloadSize = 1472;           /* Transport layer payload size in bytes. */
     std::string dataRate = "100Mbps";      /* Application layer datarate. */
     std::string tcpVariant = "TcpNewReno"; /* TCP variant type. */
