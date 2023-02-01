@@ -10,3 +10,11 @@ Sender connects to load balancer using UDP, and load balancer connects to receiv
 ### Topology
 
 ![Topology](Assets/Topology.png)
+
+We will test this topology with 1Mbps, 10Mbps, and 100Mbps bandwidth and with error rate of
+0.0%, 0.000001%, 0.00001%, 0.0001%, and 0.001%.
+
+We expect higher throughput with higher bandwidth and lower throughput with more error rate.
+
+<!---I hate this project
+My teammate left me empty-handed--->
