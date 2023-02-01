@@ -21,5 +21,23 @@ Our load balancer uses a queue to store data from senders, and it sends data to 
 We randomly select a receiver to send data to and dequeue data from queue. We also apply the error rate to data before
 sending it to receiver. If the data packed should be dropped we ignore the packed and not send to receiver.
 
+### How to run
+
+*Unfortunately I was not able to make ns3 visualization working, so we only stick to raw data generated*
+
+place `main.cc` file under `scratch` directory and enter command below.
+
+**3.35:**
+
+```bash
+./waf --run scratch/main
+```
+
+**3.37:**
+
+```bash
+./ns3 run scratch/main
+```
+
 <!---I hate this project
 My teammate left me empty-handed--->

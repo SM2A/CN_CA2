@@ -175,6 +175,28 @@ int main(int argc, char *argv[]) {
     staDevices = wifiHelper.Install(wifiPhy, wifiMac, sender2);
     staDevices = wifiHelper.Install(wifiPhy, wifiMac, sender3);
 
+    PointToPointHelper pointToPoint;
+    pointToPoint.SetDeviceAttribute("DataRate", StringValue(dataRate));
+    pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
+
+    Ipv4AddressHelper address;
+
+    NetDeviceContainer load_balancer_devices = pointToPoint.Install(load_balancer);
+
+    address.SetBase("10.1.1.0", "255.255.255.0");
+    Ipv4InterfaceContainer p2pInterfaces;
+    p2pInterfaces = address.Assign(load_balancer_devices);
+
+    address.SetBase("10.1.3.0", "255.255.255.0");
+    address.Assign(staDevices);
+    address.Assign(load_balancer_devices);
+
+    UdpEchoServerHelper echoServer(9);
+
+    Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+
+    Simulator::Stop(Seconds(10.0));
+
     Simulator::Run();
     Simulator::Destroy();
 
