@@ -9,4 +9,4 @@ Sender connects to load balancer using UDP, and load balancer connects to receiv
 
 ### Topology
 
-![Topology](../Assets/Topology.png)
+![Topology](Assets/topology.png)
