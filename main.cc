@@ -39,6 +39,48 @@ using namespace std;
 
 NS_LOG_COMPONENT_DEFINE ("LoadBalancer");
 
+void
+ThroughputMonitor(FlowMonitorHelper* fmhelper, Ptr<FlowMonitor> flowMon, Gnuplot2dDataset DataSet)
+{
+    double localThrou = 0;
+    std::map<FlowId, FlowMonitor::FlowStats> flowStats = flowMon->GetFlowStats();
+    Ptr<Ipv4FlowClassifier> classing = DynamicCast<Ipv4FlowClassifier>(fmhelper->GetClassifier());
+    for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator stats = flowStats.begin();
+         stats != flowStats.end();
+         ++stats)
+    {
+        Ipv4FlowClassifier::FiveTuple fiveTuple = classing->FindFlow(stats->first);
+        std::cout << "Flow ID			: " << stats->first << " ; " << fiveTuple.sourceAddress
+                  << " -----> " << fiveTuple.destinationAddress << std::endl;
+        std::cout << "Tx Packets = " << stats->second.txPackets << std::endl;
+        std::cout << "Rx Packets = " << stats->second.rxPackets << std::endl;
+        std::cout << "Duration		: "
+                  << (stats->second.timeLastRxPacket.GetSeconds() -
+                      stats->second.timeFirstTxPacket.GetSeconds())
+                  << std::endl;
+        std::cout << "Last Received Packet	: " << stats->second.timeLastRxPacket.GetSeconds()
+                  << " Seconds" << std::endl;
+        std::cout << "Throughput: "
+                  << stats->second.rxBytes * 8.0 /
+                         (stats->second.timeLastRxPacket.GetSeconds() -
+                          stats->second.timeFirstTxPacket.GetSeconds()) /
+                         1024 / 1024
+                  << " Mbps" << std::endl;
+        localThrou = stats->second.rxBytes * 8.0 /
+                     (stats->second.timeLastRxPacket.GetSeconds() -
+                      stats->second.timeFirstTxPacket.GetSeconds()) /
+                     1024 / 1024;
+        if (stats->first == 1)
+        {
+            DataSet.Add((double)Simulator::Now().GetSeconds(), (double)localThrou);
+        }
+        std::cout << "---------------------------------------------------------------------------"
+                  << std::endl;
+    }
+    Simulator::Schedule(Seconds(10), &ThroughputMonitor, fmhelper, flowMon, DataSet);
+    flowMon->SerializeToXmlFile("ThroughputMonitor.xml", true, true);
+}
+
 int main(int argc, char *argv[]) {
 
     uint32_t payloadSize = 1472;
@@ -116,7 +158,6 @@ int main(int argc, char *argv[]) {
     Ptr<Node> receiver3 = networkNodes.Get(5);
 
     Ptr<Node> load_balancer = networkNodes.Get(6);
-
 
 
     /* Configure AP */
