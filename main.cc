@@ -41,20 +41,19 @@ NS_LOG_COMPONENT_DEFINE ("LoadBalancer");
 
 int main(int argc, char *argv[]) {
 
-    double bandWidth[3] = {1.0, 10.0, 100.0};
-    double error_rate[5] = {0.0, 0.000001, 0.00001, 0.0001, 0.001};
-
-    uint32_t payloadSize = 1472;           /* Transport layer payload size in bytes. */
-    std::string dataRate = "100Mbps";      /* Application layer datarate. */
-    std::string tcpVariant = "TcpNewReno"; /* TCP variant type. */
-    std::string phyRate = "HtMcs7";        /* Physical layer bitrate. */
-    double simulationTime = 10;            /* Simulation time in seconds. */
-    bool pcapTracing = false;              /* PCAP Tracing is enabled or not. */
+    uint32_t payloadSize = 1472;
+    std::string dataRate = "100Mbps";
+    std::string errorRate = "0.001";
+    std::string tcpVariant = "TcpNewReno";
+    std::string phyRate = "HtMcs7";
+    double simulationTime = 10;
+    bool pcapTracing = false;
 
     /* Command line argument parser setup. */
     CommandLine cmd(__FILE__);
     cmd.AddValue("payloadSize", "Payload size in bytes", payloadSize);
-    cmd.AddValue("dataRate", "Application data ate", dataRate);
+    cmd.AddValue("dataRate", "Application data rate", dataRate);
+    cmd.AddValue("errorRate", "Application error rate", errorRate);
     cmd.AddValue("tcpVariant",
                  "Transport protocol to use: TcpNewReno, "
                  "TcpHybla, TcpHighSpeed, TcpHtcp, TcpVegas, TcpScalable, TcpVeno, "
@@ -88,7 +87,7 @@ int main(int argc, char *argv[]) {
 
     WifiMacHelper wifiMac;
     WifiHelper wifiHelper;
-    wifiHelper.SetStandard(WIFI_STANDARD_UNSPECIFIED);
+    wifiHelper.SetStandard(ns3::WIFI_STANDARD_UNSPECIFIED);
 
     /* Set up Legacy Channel */
     YansWifiChannelHelper wifiChannel;
@@ -118,6 +117,8 @@ int main(int argc, char *argv[]) {
 
     Ptr<Node> load_balancer = networkNodes.Get(6);
 
+
+
     /* Configure AP */
     Ssid ssid = Ssid("network");
     wifiMac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
@@ -132,6 +133,9 @@ int main(int argc, char *argv[]) {
     staDevices = wifiHelper.Install(wifiPhy, wifiMac, sender1);
     staDevices = wifiHelper.Install(wifiPhy, wifiMac, sender2);
     staDevices = wifiHelper.Install(wifiPhy, wifiMac, sender3);
+
+    Simulator::Run();
+    Simulator::Destroy();
 
     return 0;
 }
