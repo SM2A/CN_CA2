@@ -16,5 +16,10 @@ We will test this topology with 1Mbps, 10Mbps, and 100Mbps bandwidth and with er
 
 We expect higher throughput with higher bandwidth and lower throughput with more error rate.
 
+Our load balancer uses a queue to store data from senders, and it sends data to receivers using TCP.
+
+We randomly select a receiver to send data to and dequeue data from queue. We also apply the error rate to data before
+sending it to receiver. If the data packed should be dropped we ignore the packed and not send to receiver.
+
 <!---I hate this project
 My teammate left me empty-handed--->
