@@ -1,71 +1,48 @@
-#include "ns3/yans-wifi-channel.h"
-#include "ns3/yans-wifi-helper.h"
-
-#include "ns3/applications-module.h"
-#include "ns3/core-module.h"
-#include "ns3/enum.h"
-#include "ns3/error-model.h"
+#include <queue>
+#include <vector>
+#include <fstream>
+#include "ns3/gnuplot.h"
 #include "ns3/event-id.h"
+#include "ns3/udp-header.h"
+#include "ns3/core-module.h"
+#include "ns3/packet-sink.h"
+#include "ns3/network-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/applications-module.h"
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/flow-monitor-module.h"
-#include "ns3/gnuplot.h"
-#include "ns3/internet-module.h"
-#include "ns3/ipv4-global-routing-helper.h"
-#include "ns3/network-module.h"
-#include "ns3/packet-sink.h"
 #include "ns3/point-to-point-module.h"
-#include "ns3/tcp-header.h"
 #include "ns3/traffic-control-module.h"
-#include "ns3/udp-header.h"
-
-#include "ns3/command-line.h"
-#include "ns3/config.h"
-#include "ns3/internet-stack-helper.h"
-#include "ns3/ipv4-address-helper.h"
-#include "ns3/log.h"
-#include "ns3/mobility-helper.h"
-#include "ns3/mobility-model.h"
-#include "ns3/on-off-helper.h"
-#include "ns3/packet-sink-helper.h"
-#include "ns3/ssid.h"
-#include "ns3/string.h"
-#include "ns3/tcp-westwood.h"
-
-#include <fstream>
-#include <string>
+#include "ns3/ipv4-global-routing-helper.h"
 
 using namespace ns3;
 using namespace std;
 
-NS_LOG_COMPONENT_DEFINE ("LoadBalancer");
-
-void
-ThroughputMonitor(FlowMonitorHelper* fmhelper, Ptr<FlowMonitor> flowMon, Gnuplot2dDataset DataSet)
-{
+void ThroughputMonitor(FlowMonitorHelper* fmhelper, Ptr<FlowMonitor> flowMon, Gnuplot2dDataset DataSet) {
     double localThrou = 0;
-    std::map<FlowId, FlowMonitor::FlowStats> flowStats = flowMon->GetFlowStats();
+    map<FlowId, FlowMonitor::FlowStats> flowStats = flowMon->GetFlowStats();
     Ptr<Ipv4FlowClassifier> classing = DynamicCast<Ipv4FlowClassifier>(fmhelper->GetClassifier());
-    for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator stats = flowStats.begin();
+    for (map<FlowId, FlowMonitor::FlowStats>::const_iterator stats = flowStats.begin();
          stats != flowStats.end();
          ++stats)
     {
         Ipv4FlowClassifier::FiveTuple fiveTuple = classing->FindFlow(stats->first);
-        std::cout << "Flow ID			: " << stats->first << " ; " << fiveTuple.sourceAddress
-                  << " -----> " << fiveTuple.destinationAddress << std::endl;
-        std::cout << "Tx Packets = " << stats->second.txPackets << std::endl;
-        std::cout << "Rx Packets = " << stats->second.rxPackets << std::endl;
-        std::cout << "Duration		: "
+        cout << "Flow ID			: " << stats->first << " ; " << fiveTuple.sourceAddress
+                  << " -----> " << fiveTuple.destinationAddress << endl;
+        cout << "Tx Packets = " << stats->second.txPackets << endl;
+        cout << "Rx Packets = " << stats->second.rxPackets << endl;
+        cout << "Duration		: "
                   << (stats->second.timeLastRxPacket.GetSeconds() -
                       stats->second.timeFirstTxPacket.GetSeconds())
-                  << std::endl;
-        std::cout << "Last Received Packet	: " << stats->second.timeLastRxPacket.GetSeconds()
-                  << " Seconds" << std::endl;
-        std::cout << "Throughput: "
+                  << endl;
+        cout << "Last Received Packet	: " << stats->second.timeLastRxPacket.GetSeconds()
+                  << " Seconds" << endl;
+        cout << "Throughput: "
                   << stats->second.rxBytes * 8.0 /
                          (stats->second.timeLastRxPacket.GetSeconds() -
                           stats->second.timeFirstTxPacket.GetSeconds()) /
                          1024 / 1024
-                  << " Mbps" << std::endl;
+                  << " Mbps" << endl;
         localThrou = stats->second.rxBytes * 8.0 /
                      (stats->second.timeLastRxPacket.GetSeconds() -
                       stats->second.timeFirstTxPacket.GetSeconds()) /
@@ -74,129 +51,167 @@ ThroughputMonitor(FlowMonitorHelper* fmhelper, Ptr<FlowMonitor> flowMon, Gnuplot
         {
             DataSet.Add((double)Simulator::Now().GetSeconds(), (double)localThrou);
         }
-        std::cout << "---------------------------------------------------------------------------"
-                  << std::endl;
+        cout << "---------------------------------------------------------------------------"
+                  << endl;
     }
     Simulator::Schedule(Seconds(10), &ThroughputMonitor, fmhelper, flowMon, DataSet);
     flowMon->SerializeToXmlFile("ThroughputMonitor.xml", true, true);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
 
-    uint32_t payloadSize = 1472;
-    std::string dataRate = "100Mbps";
-    std::string errorRate = "0.001";
-    std::string tcpVariant = "TcpNewReno";
-    std::string phyRate = "HtMcs7";
-    double simulationTime = 10;
-    bool pcapTracing = false;
+    int error_rate = 100000;
+//    double band_width = 100.0;
+    int senders_count = 3;
+    int receivers_count = 3;
+    int packet_size = 1472;
+    string data_rate = "33Mb/s";
+    string delay = "2ms";
 
-    /* Command line argument parser setup. */
-    CommandLine cmd(__FILE__);
-    cmd.AddValue("payloadSize", "Payload size in bytes", payloadSize);
-    cmd.AddValue("dataRate", "Application data rate", dataRate);
-    cmd.AddValue("errorRate", "Application error rate", errorRate);
-    cmd.AddValue("tcpVariant",
-                 "Transport protocol to use: TcpNewReno, "
-                 "TcpHybla, TcpHighSpeed, TcpHtcp, TcpVegas, TcpScalable, TcpVeno, "
-                 "TcpBic, TcpYeah, TcpIllinois, TcpWestwood, TcpWestwoodPlus, TcpLedbat ",
-                 tcpVariant);
-    cmd.AddValue("phyRate", "Physical layer bitrate", phyRate);
-    cmd.AddValue("simulationTime", "Simulation time in seconds", simulationTime);
-    cmd.AddValue("pcap", "Enable/disable PCAP Tracing", pcapTracing);
-    cmd.Parse(argc, argv);
+    Config::SetDefault("ns3::OnOffApplication::PacketSize", UintegerValue(packet_size));
+    Config::SetDefault("ns3::OnOffApplication::DataRate", DataRateValue(DataRate(data_rate)));
 
-    tcpVariant = std::string("ns3::") + tcpVariant;
-    // Select TCP variant
-    if (tcpVariant == "ns3::TcpWestwoodPlus")
-    {
-        // TcpWestwoodPlus is not an actual TypeId name; we need TcpWestwood here
-        Config::SetDefault("ns3::TcpL4Protocol::SocketType", TypeIdValue(TcpWestwood::GetTypeId()));
-        // the default protocol type in ns3::TcpWestwood is WESTWOOD
-        Config::SetDefault("ns3::TcpWestwood::ProtocolType", EnumValue(TcpWestwood::WESTWOODPLUS));
-    }
-    else
-    {
-        TypeId tcpTid;
-        NS_ABORT_MSG_UNLESS(TypeId::LookupByNameFailSafe(tcpVariant, &tcpTid),
-                            "TypeId " << tcpVariant << " not found");
-        Config::SetDefault("ns3::TcpL4Protocol::SocketType",
-                           TypeIdValue(TypeId::LookupByName(tcpVariant)));
-    }
+    NodeContainer network;
+    network.Create(senders_count + receivers_count + 1);
+    NodeContainer sender1 = NodeContainer(network.Get(0), network.Get(6));
+    NodeContainer sender2 = NodeContainer(network.Get(1), network.Get(6));
+    NodeContainer sender3 = NodeContainer(network.Get(2), network.Get(6));
 
-    /* Configure TCP Options */
-    Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(payloadSize));
+    NodeContainer receiver1 = NodeContainer(network.Get(6), network.Get(3));
+    NodeContainer receiver2 = NodeContainer(network.Get(6), network.Get(4));
+    NodeContainer receiver3 = NodeContainer(network.Get(6), network.Get(5));
 
-    WifiMacHelper wifiMac;
-    WifiHelper wifiHelper;
-    wifiHelper.SetStandard(ns3::WIFI_STANDARD_UNSPECIFIED);
+    InternetStackHelper internet;
+    internet.Install(network);
 
-    /* Set up Legacy Channel */
-    YansWifiChannelHelper wifiChannel;
-    wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
-    wifiChannel.AddPropagationLoss("ns3::FriisPropagationLossModel", "Frequency", DoubleValue(5e9));
+    PointToPointHelper p2p;
+    p2p.SetDeviceAttribute("DataRate", DataRateValue(data_rate));
+    p2p.SetChannelAttribute("Delay", StringValue(delay));
 
-    /* Setup Physical Layer */
-    YansWifiPhyHelper wifiPhy;
-    wifiPhy.SetChannel(wifiChannel.Create());
-    wifiPhy.SetErrorRateModel("ns3::YansErrorRateModel");
-    wifiHelper.SetRemoteStationManager("ns3::ConstantRateWifiManager",
-                                       "DataMode",
-                                       StringValue(phyRate),
-                                       "ControlMode",
-                                       StringValue("HtMcs0"));
+    NetDeviceContainer sender1_device = p2p.Install(sender1);
+    NetDeviceContainer sender2_device = p2p.Install(sender2);
+    NetDeviceContainer sender3_device = p2p.Install(sender3);
 
-    NodeContainer networkNodes;
-    networkNodes.Create(7);
+    NetDeviceContainer receiver1_device = p2p.Install(receiver1);
+    NetDeviceContainer receiver2_device = p2p.Install(receiver2);
+    NetDeviceContainer receiver3_device = p2p.Install(receiver3);
 
-    Ptr<Node> sender1 = networkNodes.Get(0);
-    Ptr<Node> sender2 = networkNodes.Get(1);
-    Ptr<Node> sender3 = networkNodes.Get(2);
+    Ipv4AddressHelper ipv4;
+    ipv4.SetBase("10.1.1.0", "255.255.255.0");
+    Ipv4InterfaceContainer sender1_ip = ipv4.Assign(sender1_device);
 
-    Ptr<Node> receiver1 = networkNodes.Get(3);
-    Ptr<Node> receiver2 = networkNodes.Get(4);
-    Ptr<Node> receiver3 = networkNodes.Get(5);
+    ipv4.SetBase("10.1.2.0", "255.255.255.0");
+    Ipv4InterfaceContainer sender2_ip = ipv4.Assign(sender2_device);
 
-    Ptr<Node> load_balancer = networkNodes.Get(6);
+    ipv4.SetBase("10.1.3.0", "255.255.255.0");
+    Ipv4InterfaceContainer sender3_ip = ipv4.Assign(sender3_device);
 
+    ipv4.SetBase("10.1.4.0", "255.255.255.0");
+    Ipv4InterfaceContainer receiver1_ip = ipv4.Assign(receiver1_device);
 
-    /* Configure AP */
-    Ssid ssid = Ssid("network");
-    wifiMac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
+    ipv4.SetBase("10.1.5.0", "255.255.255.0");
+    Ipv4InterfaceContainer receiver2_ip = ipv4.Assign(receiver2_device);
 
-    NetDeviceContainer apDevice;
-    apDevice = wifiHelper.Install(wifiPhy, wifiMac, load_balancer);
-
-    /* Configure STA */
-    wifiMac.SetType("ns3::StaWifiMac", "Ssid", SsidValue(ssid));
-
-    NetDeviceContainer staDevices;
-    staDevices = wifiHelper.Install(wifiPhy, wifiMac, sender1);
-    staDevices = wifiHelper.Install(wifiPhy, wifiMac, sender2);
-    staDevices = wifiHelper.Install(wifiPhy, wifiMac, sender3);
-
-    PointToPointHelper pointToPoint;
-    pointToPoint.SetDeviceAttribute("DataRate", StringValue(dataRate));
-    pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
-
-    Ipv4AddressHelper address;
-
-    NetDeviceContainer load_balancer_devices = pointToPoint.Install(load_balancer);
-
-    address.SetBase("10.1.1.0", "255.255.255.0");
-    Ipv4InterfaceContainer p2pInterfaces;
-    p2pInterfaces = address.Assign(load_balancer_devices);
-
-    address.SetBase("10.1.3.0", "255.255.255.0");
-    address.Assign(staDevices);
-    address.Assign(load_balancer_devices);
-
-    UdpEchoServerHelper echoServer(9);
+    ipv4.SetBase("10.1.6.0", "255.255.255.0");
+    Ipv4InterfaceContainer receiver3_ip = ipv4.Assign(receiver3_device);
 
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-    Simulator::Stop(Seconds(10.0));
+    uint16_t inboud_port = 9;
 
+    OnOffHelper onOffHelper("ns3::UdpSocketFactory",Address(InetSocketAddress(sender1_ip.GetAddress(1), inboud_port)));
+    onOffHelper.SetConstantRate(DataRate(data_rate));
+    ApplicationContainer apps = onOffHelper.Install(network.Get(0));
+    apps.Start(Seconds(1.0));
+    apps.Stop(Seconds(10.0));
+
+    onOffHelper.SetAttribute("Remote", AddressValue(InetSocketAddress(sender2_ip.GetAddress(1), inboud_port)));
+    apps = onOffHelper.Install(network.Get(1));
+    apps.Start(Seconds(1.1));
+    apps.Stop(Seconds(10.0));
+
+    onOffHelper.SetAttribute("Remote", AddressValue(InetSocketAddress(sender3_ip.GetAddress(1), inboud_port)));
+    apps = onOffHelper.Install(network.Get(2));
+    apps.Start(Seconds(1.2));
+    apps.Stop(Seconds(10.0));
+
+    uint16_t outbound_port = 10;
+
+    queue<uint32_t> inbound_data;
+    for (int i = 0; i < packet_size; ++i) { inbound_data.push(i); }
+
+    vector<uint32_t> outbound_data1;
+    vector<uint32_t> outbound_data2;
+    vector<uint32_t> outbound_data3;
+
+    while (!inbound_data.empty()) {
+        int error = rand() % error_rate;
+        if (error == 0) {
+            inbound_data.pop();
+            continue;
+        }
+
+        int choice = (rand() % 3) + 1;
+        switch (choice) {
+        case 1:
+            outbound_data1.push_back(inbound_data.front());
+            break;
+        case 2:
+            outbound_data2.push_back(inbound_data.front());
+            break;
+        case 3:
+            outbound_data3.push_back(inbound_data.front());
+            break;
+        }
+    }
+
+    OnOffHelper source("ns3::TcpSocketFactory",Address(InetSocketAddress(receiver1_ip.GetAddress(1), outbound_port)));
+
+    ApplicationContainer sourceApps = source.Install(network.Get(6));
+    sourceApps.Start(Seconds(1.3));
+    sourceApps.Stop(Seconds(20));
+
+    source.SetAttribute("Remote", AddressValue(InetSocketAddress(receiver2_ip.GetAddress(1), outbound_port)));
+
+    sourceApps = source.Install(network.Get(6));
+    sourceApps.Start(Seconds(1.3));
+    sourceApps.Stop(Seconds(20));
+
+    source.SetAttribute("Remote", AddressValue(InetSocketAddress(receiver3_ip.GetAddress(1), outbound_port)));
+
+    sourceApps = source.Install(network.Get(6));
+    sourceApps.Start(Seconds(1.3));
+    sourceApps.Stop(Seconds(20));
+
+    string fileNameWithNoExtension = "FlowVSThroughput_";
+    string mainPlotTitle = "Flow vs Throughput";
+    string graphicsFileName = fileNameWithNoExtension + ".png";
+    string plotFileName = fileNameWithNoExtension + ".plt";
+    string plotTitle = mainPlotTitle + ", Error: ";
+    string dataTitle = "Throughput";
+
+    Gnuplot gnuplot(graphicsFileName);
+    gnuplot.SetTitle(plotTitle);
+
+    gnuplot.SetTerminal("png");
+
+    gnuplot.SetLegend("Flow", "Throughput");
+
+    Gnuplot2dDataset dataset;
+    dataset.SetTitle(dataTitle);
+    dataset.SetStyle(Gnuplot2dDataset::LINES_POINTS);
+
+    Ptr<FlowMonitor> flowMonitor;
+    FlowMonitorHelper flowHelper;
+    flowMonitor = flowHelper.InstallAll();
+
+    ThroughputMonitor(&flowHelper, flowMonitor, dataset);
+
+    AsciiTraceHelper ascii;
+    p2p.EnableAsciiAll(ascii.CreateFileStream("out.tr"));
+    p2p.EnablePcapAll("out");
+
+    Simulator::Stop(Seconds(10));
     Simulator::Run();
     Simulator::Destroy();
 
