@@ -119,21 +119,21 @@ int main(int argc, char* argv[]) {
 
     uint16_t inboud_port = 9;
 
-    OnOffHelper onOffHelper("ns3::UdpSocketFactory",Address(InetSocketAddress(sender1_ip.GetAddress(1), inboud_port)));
-    onOffHelper.SetConstantRate(DataRate(data_rate));
-    ApplicationContainer apps = onOffHelper.Install(network.Get(0));
-    apps.Start(Seconds(1.0));
-    apps.Stop(Seconds(10.0));
+    OnOffHelper onOffHelper_sender("ns3::UdpSocketFactory",Address(InetSocketAddress(sender1_ip.GetAddress(1), inboud_port)));
+    onOffHelper_sender.SetConstantRate(DataRate(data_rate));
+    ApplicationContainer application_sender = onOffHelper_sender.Install(network.Get(0));
+    application_sender.Start(Seconds(1.0));
+    application_sender.Stop(Seconds(10.0));
 
-    onOffHelper.SetAttribute("Remote", AddressValue(InetSocketAddress(sender2_ip.GetAddress(1), inboud_port)));
-    apps = onOffHelper.Install(network.Get(1));
-    apps.Start(Seconds(1.1));
-    apps.Stop(Seconds(10.0));
+    onOffHelper_sender.SetAttribute("Remote", AddressValue(InetSocketAddress(sender2_ip.GetAddress(1), inboud_port)));
+    application_sender = onOffHelper_sender.Install(network.Get(1));
+    application_sender.Start(Seconds(1.1));
+    application_sender.Stop(Seconds(10.0));
 
-    onOffHelper.SetAttribute("Remote", AddressValue(InetSocketAddress(sender3_ip.GetAddress(1), inboud_port)));
-    apps = onOffHelper.Install(network.Get(2));
-    apps.Start(Seconds(1.2));
-    apps.Stop(Seconds(10.0));
+    onOffHelper_sender.SetAttribute("Remote", AddressValue(InetSocketAddress(sender3_ip.GetAddress(1), inboud_port)));
+    application_sender = onOffHelper_sender.Install(network.Get(2));
+    application_sender.Start(Seconds(1.2));
+    application_sender.Stop(Seconds(10.0));
 
     uint16_t outbound_port = 10;
 
@@ -165,23 +165,24 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    OnOffHelper source("ns3::TcpSocketFactory",Address(InetSocketAddress(receiver1_ip.GetAddress(1), outbound_port)));
+    OnOffHelper onOffHelper_receiver("ns3::TcpSocketFactory", Address(InetSocketAddress(receiver1_ip.GetAddress(1), outbound_port)));
+    onOffHelper_receiver.SetConstantRate(DataRate(data_rate));
 
-    ApplicationContainer sourceApps = source.Install(network.Get(6));
-    sourceApps.Start(Seconds(1.3));
-    sourceApps.Stop(Seconds(20));
+    ApplicationContainer application_receiver = onOffHelper_receiver.Install(network.Get(6));
+    application_receiver.Start(Seconds(1.3));
+    application_receiver.Stop(Seconds(20));
 
-    source.SetAttribute("Remote", AddressValue(InetSocketAddress(receiver2_ip.GetAddress(1), outbound_port)));
+    onOffHelper_receiver.SetAttribute("Remote", AddressValue(InetSocketAddress(receiver2_ip.GetAddress(1), outbound_port)));
 
-    sourceApps = source.Install(network.Get(6));
-    sourceApps.Start(Seconds(1.3));
-    sourceApps.Stop(Seconds(20));
+    application_receiver = onOffHelper_receiver.Install(network.Get(6));
+    application_receiver.Start(Seconds(1.3));
+    application_receiver.Stop(Seconds(20));
 
-    source.SetAttribute("Remote", AddressValue(InetSocketAddress(receiver3_ip.GetAddress(1), outbound_port)));
+    onOffHelper_receiver.SetAttribute("Remote", AddressValue(InetSocketAddress(receiver3_ip.GetAddress(1), outbound_port)));
 
-    sourceApps = source.Install(network.Get(6));
-    sourceApps.Start(Seconds(1.3));
-    sourceApps.Stop(Seconds(20));
+    application_receiver = onOffHelper_receiver.Install(network.Get(6));
+    application_receiver.Start(Seconds(1.3));
+    application_receiver.Stop(Seconds(20));
 
     string fileNameWithNoExtension = "FlowVSThroughput_";
     string mainPlotTitle = "Flow vs Throughput";
