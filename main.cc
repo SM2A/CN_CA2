@@ -58,7 +58,7 @@ void ThroughputMonitor(FlowMonitorHelper* fmhelper, Ptr<FlowMonitor> flowMon, Gn
     flowMon->SerializeToXmlFile("ThroughputMonitor.xml", true, true);
 }
 
-int main(int argc, char* argv[]) {
+int main() {
 
     int error_rate = 100000;
 //    double band_width = 100.0;
@@ -170,19 +170,19 @@ int main(int argc, char* argv[]) {
 
     ApplicationContainer application_receiver = onOffHelper_receiver.Install(network.Get(6));
     application_receiver.Start(Seconds(1.3));
-    application_receiver.Stop(Seconds(20));
+    application_receiver.Stop(Seconds(10));
 
     onOffHelper_receiver.SetAttribute("Remote", AddressValue(InetSocketAddress(receiver2_ip.GetAddress(1), outbound_port)));
 
     application_receiver = onOffHelper_receiver.Install(network.Get(6));
     application_receiver.Start(Seconds(1.3));
-    application_receiver.Stop(Seconds(20));
+    application_receiver.Stop(Seconds(10));
 
     onOffHelper_receiver.SetAttribute("Remote", AddressValue(InetSocketAddress(receiver3_ip.GetAddress(1), outbound_port)));
 
     application_receiver = onOffHelper_receiver.Install(network.Get(6));
     application_receiver.Start(Seconds(1.3));
-    application_receiver.Stop(Seconds(20));
+    application_receiver.Stop(Seconds(10));
 
     string fileNameWithNoExtension = "FlowVSThroughput_";
     string mainPlotTitle = "Flow vs Throughput";
