@@ -24,21 +24,20 @@ void ThroughputMonitor(FlowMonitorHelper* fmhelper, Ptr<FlowMonitor> flowMon, Gn
     Ptr<Ipv4FlowClassifier> classing = DynamicCast<Ipv4FlowClassifier>(fmhelper->GetClassifier());
     for (map<FlowId, FlowMonitor::FlowStats>::const_iterator stats = flowStats.begin();
          stats != flowStats.end();
-         ++stats)
-    {
+         ++stats) {
         Ipv4FlowClassifier::FiveTuple fiveTuple = classing->FindFlow(stats->first);
-        cout << "Flow ID			: " << stats->first << " ; " << fiveTuple.sourceAddress
-                  << " -----> " << fiveTuple.destinationAddress << endl;
+        cout << "Flow ID			: "
+             << stats->first << " ; " << fiveTuple.sourceAddress
+             << " -----> " << fiveTuple.destinationAddress << endl;
         cout << "Tx Packets = " << stats->second.txPackets << endl;
         cout << "Rx Packets = " << stats->second.rxPackets << endl;
         cout << "Duration		: "
-                  << (stats->second.timeLastRxPacket.GetSeconds() -
-                      stats->second.timeFirstTxPacket.GetSeconds())
-                  << endl;
+             << (stats->second.timeLastRxPacket.GetSeconds() - stats->second.timeFirstTxPacket.GetSeconds())
+             << endl;
         cout << "Last Received Packet	: " << stats->second.timeLastRxPacket.GetSeconds()
-                  << " Seconds" << endl;
+             << " Seconds" << endl;
         cout << "Throughput: "
-                  << stats->second.rxBytes * 8.0 /
+             << stats->second.rxBytes * 8.0 /
                          (stats->second.timeLastRxPacket.GetSeconds() -
                           stats->second.timeFirstTxPacket.GetSeconds()) /
                          1024 / 1024
@@ -47,18 +46,19 @@ void ThroughputMonitor(FlowMonitorHelper* fmhelper, Ptr<FlowMonitor> flowMon, Gn
                      (stats->second.timeLastRxPacket.GetSeconds() -
                       stats->second.timeFirstTxPacket.GetSeconds()) /
                      1024 / 1024;
-        if (stats->first == 1)
-        {
+        if (stats->first == 1) {
             DataSet.Add((double)Simulator::Now().GetSeconds(), (double)localThrou);
         }
-        cout << "---------------------------------------------------------------------------"
-                  << endl;
+        cout << "---------------------------------------------------------------------------" << endl;
     }
     Simulator::Schedule(Seconds(10), &ThroughputMonitor, fmhelper, flowMon, DataSet);
     flowMon->SerializeToXmlFile("ThroughputMonitor.xml", true, true);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+
+	ns3::CommandLine cmd;
+    cmd.Parse (argc, argv);
 
     int error_rate = 100000;
 //    double band_width = 100.0;
@@ -68,8 +68,8 @@ int main() {
     string data_rate = "33Mb/s";
     string delay = "2ms";
 
-    Config::SetDefault("ns3::OnOffApplication::PacketSize", UintegerValue(packet_size));
-    Config::SetDefault("ns3::OnOffApplication::DataRate", DataRateValue(DataRate(data_rate)));
+    Config::SetDefault ("ns3::OnOffApplication::PacketSize", UintegerValue (packet_size));
+    Config::SetDefault ("ns3::OnOffApplication::DataRate", DataRateValue (DataRate (data_rate)));
 
     NodeContainer network;
     network.Create(senders_count + receivers_count + 1);
@@ -117,25 +117,25 @@ int main() {
 
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-    uint16_t inboud_port = 9;
+    uint16_t inboud_port = 1379;
 
     OnOffHelper onOffHelper_sender("ns3::UdpSocketFactory",Address(InetSocketAddress(sender1_ip.GetAddress(1), inboud_port)));
     onOffHelper_sender.SetConstantRate(DataRate(data_rate));
     ApplicationContainer application_sender = onOffHelper_sender.Install(network.Get(0));
-    application_sender.Start(Seconds(1.0));
-    application_sender.Stop(Seconds(10.0));
+    application_sender.Start(Seconds(0.1));
+    application_sender.Stop(Seconds(15.0));
 
     onOffHelper_sender.SetAttribute("Remote", AddressValue(InetSocketAddress(sender2_ip.GetAddress(1), inboud_port)));
     application_sender = onOffHelper_sender.Install(network.Get(1));
-    application_sender.Start(Seconds(1.1));
-    application_sender.Stop(Seconds(10.0));
+    application_sender.Start(Seconds(0.2));
+    application_sender.Stop(Seconds(15.0));
 
     onOffHelper_sender.SetAttribute("Remote", AddressValue(InetSocketAddress(sender3_ip.GetAddress(1), inboud_port)));
     application_sender = onOffHelper_sender.Install(network.Get(2));
-    application_sender.Start(Seconds(1.2));
-    application_sender.Stop(Seconds(10.0));
+    application_sender.Start(Seconds(0.3));
+    application_sender.Stop(Seconds(15.0));
 
-    uint16_t outbound_port = 10;
+    uint16_t outbound_port = 1380;
 
     queue<uint32_t> inbound_data;
     for (int i = 0; i < packet_size; ++i) { inbound_data.push(i); }
@@ -170,20 +170,20 @@ int main() {
     onOffHelper_receiver.SetConstantRate(DataRate(data_rate));
 
     ApplicationContainer application_receiver = onOffHelper_receiver.Install(network.Get(6));
-    application_receiver.Start(Seconds(1.3));
-    application_receiver.Stop(Seconds(10));
+    application_receiver.Start(Seconds(1.0));
+    application_receiver.Stop(Seconds(20));
 
     onOffHelper_receiver.SetAttribute("Remote", AddressValue(InetSocketAddress(receiver2_ip.GetAddress(1), outbound_port)));
 
     application_receiver = onOffHelper_receiver.Install(network.Get(6));
-    application_receiver.Start(Seconds(1.3));
-    application_receiver.Stop(Seconds(10));
+    application_receiver.Start(Seconds(1.0));
+    application_receiver.Stop(Seconds(20));
 
     onOffHelper_receiver.SetAttribute("Remote", AddressValue(InetSocketAddress(receiver3_ip.GetAddress(1), outbound_port)));
 
     application_receiver = onOffHelper_receiver.Install(network.Get(6));
-    application_receiver.Start(Seconds(1.3));
-    application_receiver.Stop(Seconds(10));
+    application_receiver.Start(Seconds(1.0));
+    application_receiver.Stop(Seconds(20));
 
     string fileNameWithNoExtension = "FlowVSThroughput_";
     string mainPlotTitle = "Flow vs Throughput";
@@ -213,7 +213,7 @@ int main() {
     p2p.EnableAsciiAll(ascii.CreateFileStream("out.tr"));
     p2p.EnablePcapAll("out");
 
-    Simulator::Stop(Seconds(10));
+    Simulator::Stop(Seconds(20));
     Simulator::Run();
     Simulator::Destroy();
 
