@@ -163,6 +163,7 @@ int main() {
             outbound_data3.push_back(inbound_data.front());
             break;
         }
+        inbound_data.pop();
     }
 
     OnOffHelper onOffHelper_receiver("ns3::TcpSocketFactory", Address(InetSocketAddress(receiver1_ip.GetAddress(1), outbound_port)));
