@@ -107,7 +107,27 @@ Throughput: 0.000203314 Mbps
 ---------------------------------------------------------------------------
 ```
 
-![Visualization](Assets/vis.png)
+![Visualization](Assets/vis1.png)
+
+![Visualization](Assets/vis2.png)
+
+![Visualization](Assets/vis3.png)
+
+![Visualization](Assets/vis4.png)
+
+![Visualization](Assets/vis5.png)
+
+![Visualization](Assets/vis6.png)
+
+![Visualization](Assets/vis7.png)
+
+![Visualization](Assets/vis8.png)
+
+![Visualization](Assets/vis9.png)
+
+![Visualization](Assets/vis10.png)
+
+![Visualization](Assets/vis11.png)
 
 ### Code Explanation
 
