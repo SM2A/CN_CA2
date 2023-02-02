@@ -107,7 +107,7 @@ Throughput: 0.000203314 Mbps
 ---------------------------------------------------------------------------
 ```
 
-![Topology](Assets/vis.png)
+![Visualization](Assets/vis.png)
 
 ### Code Explanation
 
